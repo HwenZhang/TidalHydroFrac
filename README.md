@@ -2,7 +2,7 @@
 Codes for the Amery Tidal Hydrofracture project
 
 This is the main branch for viscoelastic grounding line migration.
-Docker container name: fenics-grounding-line
+Docker container name: fenics-grounding-line-2
 
 Rheology:
 Incompressible Viscoelastic: A=3e-25, n=3, mu=3.8e9
