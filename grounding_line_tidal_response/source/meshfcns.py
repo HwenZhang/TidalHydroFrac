@@ -15,7 +15,7 @@ from scipy.interpolate import interp1d
 
 # ------------------------------------------------------------------------------
 
-def mesh_routine(w,mesh,dt):
+def mesh_routine(w,mesh,dt,F_s,F_h):
     # This function solves the surface kinematic equations and moves the mesh.
     # The mean elevation of the ice-water and ice-air interfaces are also
     # computed and returned.
@@ -23,9 +23,8 @@ def mesh_routine(w,mesh,dt):
     # Compute slopes of free surfaces.
     # Returns: (1) FEniCS functions baseslope and surfslope, AND...
     #          (2) Python functions (F_h, F_s) of the surface elevations.
-
-    baseslope,F_s = get_baseslope(mesh)
-    surfslope, F_h = get_surfslope(mesh)
+    baseslope,F_s = get_baseslope(mesh,F_s)
+    surfslope, F_h = get_surfslope(mesh,F_h)
 
     # Get maximum and minimum grounding line positions
     XL,XR = get_glines(F_s)
@@ -73,6 +72,7 @@ def move_mesh(mesh,baseslope,surfslope,dt,F_s,F_h,w):
     # Loop over nodes in the boundary and displace them vertically according to
     # the velocity solution and surface slope.
     for i in vertices_on_boundary:
+        
         # BOTTOM surface: ice-water interface
         if np.abs(M[i,1]-F_s(M[i,0]))<tol:
 
@@ -91,14 +91,17 @@ def move_mesh(mesh,baseslope,surfslope,dt,F_s,F_h,w):
 
 #------------------------------------------------------------------------------
 
-def get_baseslope(mesh):
+def get_baseslope(mesh,F_s):
     # This function computes the slope of the lower surface and returns it as a FEniCS function.
 
     # Get x and y values of boundary nodes
     bmesh = BoundaryMesh(mesh,'exterior')
     M = bmesh.coordinates()
-    X =  M[:,0][ (M[:,0]>tol) & (M[:,0]<Lngth-tol) & (M[:,1]<Hght-50)]
-    Y =  M[:,1][ (M[:,0]>tol) & (M[:,0]<Lngth-tol) & (M[:,1]<Hght-50)]
+
+    # (M[:,0]>tol) & (M[:,0]<Lngth-tol) : exclude both sides
+    # abs(M[:,1]-interface(M[:,0]))<tol : exclude the top
+    X =  M[:,0][ (M[:,0]>tol) & (M[:,0]<Lngth-tol) & (abs(M[:,1]-F_s(M[:,0]))<0.1*Hght)]
+    Y =  M[:,1][ (M[:,0]>tol) & (M[:,0]<Lngth-tol) & (abs(M[:,1]-F_s(M[:,0]))<0.1*Hght)]
 
     Y = Y[np.argsort(X)]
     X = np.sort(X)
@@ -133,21 +136,20 @@ def get_baseslope(mesh):
 
 #------------------------------------------------------------------------------
 
-def get_surfslope(mesh):
+def get_surfslope(mesh,F_h):
     # This function computes the upper surface slope
 
     # Get coordinates of mesh nodes on boundary.
     bmesh = BoundaryMesh(mesh,'exterior')
     M = bmesh.coordinates()
 
-    X =  M[:,0][ (M[:,0]>tol) & (M[:,0]<Lngth-tol) & (M[:,1]>Hght/2.)]
-    Y =  M[:,1][ (M[:,0]>tol) & (M[:,0]<Lngth-tol) & (M[:,1]>Hght/2.)]
+    X =  M[:,0][ (M[:,0]>tol) & (M[:,0]<Lngth-tol) & (abs(M[:,1]-F_h(M[:,0]))<0.1*Hght)]
+    Y =  M[:,1][ (M[:,0]>tol) & (M[:,0]<Lngth-tol) & (abs(M[:,1]-F_h(M[:,0]))<0.1*Hght)]
 
     Y = Y[np.argsort(X)]
     X = np.sort(X)
 
     h_left = np.max(M[:,1][M[:,0]<tol])
-
     h_right = np.max(M[:,1][np.abs(M[:,0]-Lngth)<tol])
 
     # Append values at x=0 and x=Lngth.

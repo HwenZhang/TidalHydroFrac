@@ -31,4 +31,15 @@ def interface(x):
     elif model == 'marine':
         Int = 0.5*(bed(x) + np.abs(bed(x)))
     return Int
+
+def surface(x):
+    if model == 'lake':
+        Int = 0.5*(bed(x) - 5 + np.abs(bed(x) - (-5))) + Hght
+
+        if model_setup == 'wedge_test':
+            Int = 0.5*(bed(x) - 7.5 + np.abs(bed(x) - (-7.5))) + Hght
+
+    elif model == 'marine':
+        Int = 0.5*(bed(x) + np.abs(bed(x))) + Hght
+    return Int
 #-------------------------------------------------------------------------------

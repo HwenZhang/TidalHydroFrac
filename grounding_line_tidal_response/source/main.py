@@ -17,14 +17,14 @@ from fenics import *
 import matplotlib.pyplot as plt
 import numpy as np
 from stokes import stokes_solve_marine,get_zero_m
-from geometry import interface,bed
+from geometry import interface,bed,surface
 from meshfcns import mesh_routine
 from plotting import *
 import scipy.integrate as scpint
 import os 
 from params import (rho_i,g,tol,t_final,nt_per_year,Lngth,Hght,nt,dt,model,
                     print_convergence,X_fine,nx,tides,DX_s,model_setup)
-from params import (rho_i,g,tol,B,rm2,rho_w,C,eps_p,eps_v,sea_level,dt,
+from params import (rho_i,g,tol,B,rm2,rho_w,C,eps_p,eps_v,sea_level,dt,slope_str,
                     quad_degree,Lngth,U0,mu,tide_amplitude,resultsname,casename)
 
 #--------------------Initial conditions-----------------------------------------
@@ -58,20 +58,23 @@ fname = open('residual.txt','w')
 if model == 'marine' and tides=='on':
     # tidal simulation
     meshname = 'tides'+'_DX'+str(int(DX_s))+'_Lngth'+str(int(Lngth))+'_Slope'+slope_str+'.xdmf'
+    # import the mesh
+    mesh = Mesh('tides_DX50_Lngth20000_Slope0_05.xml')
+
 elif model == 'marine' and tides=='off':
     # mesh initiation
     meshname = model+'_DX'+str(int(DX_s))+'_Lngth'+str(int(Lngth))+'_Slope'+slope_str+'.xdmf'
     meshdict = model+'_DX'+str(int(DX_s))+'_Lngth'+str(int(Lngth))+'_Slope'+slope_str
-    new_mesh = File('tides'+'_DX'+str(int(DX_s))+'_Lngth'+str(int(Lngth))+'_Slope'+slope_str+'.xdmf')
+    new_mesh = File('tides'+'_DX'+str(int(DX_s))+'_Lngth'+str(int(Lngth))+'_Slope'+slope_str+'.xml')
+
+    # import the mesh
+    mesh = Mesh()
+    with XDMFFile(MPI.comm_world, "./meshes/"+meshdict+'/'+meshname) as meshfile:
+        meshfile.read(mesh)
+        mvc = MeshValueCollection("size_t", mesh, mesh.topology().dim() - 1)
+    print("The MeshValueCollection: ", mvc)
 else:
     exit()
-
-# import the mesh
-mesh = Mesh()
-with XDMFFile(MPI.comm_world, "./meshes/"+meshdict+'/'+meshname) as meshfile:
-    meshfile.read(mesh)
-    mvc = MeshValueCollection("size_t", mesh, mesh.topology().dim() - 1)
-print("The MeshValueCollection: ", mvc)
 
 # Define arrays for saving surfaces, lake volume, water pressure, and
 # grounding line positions over time.
@@ -86,7 +89,6 @@ t = 0                             # time
 
 # Begin time stepping
 for i in range(nt):
-
     print('-----------------------------------------------')
     print('Iteration '+str(i+1)+' out of '+str(nt))
 
@@ -99,7 +101,7 @@ for i in range(nt):
         if model == 'marine':
             w = get_zero_m(mesh)              # Placeholder for first iteration,
                                               # used for computing surface elevation functions
-        mesh,F_s,F_h,s_mean_i,h_mean_i,XL,XR = mesh_routine(w,mesh,dt)
+        mesh,F_s,F_h,s_mean_i,h_mean_i,XL,XR = mesh_routine(w,mesh,dt,interface,surface)
 
     # Solve the Stokes problem.
     # load the initial guess saved before
@@ -112,7 +114,7 @@ for i in range(nt):
 
     # Solve the surface kinematic equations, move the mesh, and compute the
     # grounding line positions.
-    mesh,F_s,F_h,s_mean_i,h_mean_i,XL,XR = mesh_routine(w,mesh,dt)
+    mesh,F_s,F_h,s_mean_i,h_mean_i,XL,XR = mesh_routine(w,mesh,dt,F_s,F_h)
     # Save quantities of interest.
     P_res[i] = P_res_i
     s_mean[i] = s_mean_i
@@ -133,13 +135,7 @@ for i in range(nt):
     vtkfile_p << (_p,t)
     vtkfile_sigma << (_sigma,t)
     vtkfile_eta << (_eta,t)
-
-    # Save function w as an initial guess for next run
-    if t == t_final - dt:
-        fFile = HDF5File(MPI.comm_world,"w_init_DX"+str(int(DX_s))+"_L"+str(int(Lngth))+".h5","w")
-        fFile.write(w,"/f")
-        fFile.close()
-
+    
     # Update time
     t += dt
 
@@ -150,7 +146,8 @@ for i in range(nt):
 # Save quantities of interest.
 t_arr = np.linspace(0,t_final,num=int(nt_per_year*t_final/3.154e7))
 
-if model == 'marine':
+if model == 'marine' and tides == 'off':
+    XDMFFile(MPI.comm_world, "./meshes/"+'tides'+'_DX'+str(int(DX_s))+'_Lngth'+str(int(Lngth))+'_Slope'+slope_str+'.xdmf').write(mesh)
     new_mesh << mesh
 
 np.savetxt(resultsname+'/'+casename+'/line_plot_data/Gamma_s',Gamma_s)    # see definition above

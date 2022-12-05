@@ -1,5 +1,5 @@
 # This file contains the functions needed for solving the Stokes system.
-from params import rho_i,g,tol,B,rm2,rho_w,C,eps_p,eps_v,sea_level,dt,quad_degree,Lngth,U0,mu
+from params import rho_i,g,tol,B,rm2_s,rm2,rho_w,C,eps_p,eps_v,sea_level,dt,quad_degree,Lngth,U0,mu
 from boundaryconds import mark_boundary,apply_bcs
 from hydrology import Vdot, sl_change
 import numpy as np
@@ -16,10 +16,11 @@ def Pi(u,nu):
         un = dot(u,nu)
         return 0.5*(un**2.0+un*abs(un))
 
-def weak_form_marine(u,p,tau,u_old,p_old,tau_old,u_test,p_test,tau_test,f,g_base,g_out,ds,nu,T):
+def weak_form_marine(u,p,tau,u_old,p_old,tau_old,u_test,p_test,tau_test,f,g_base,g_in,g_out,ds,nu,T):
     # Weak form of the marine ice sheet problem
     # viscosity (non-newtonian fluid)
     eta = B*(inner(sym(grad(u)),sym(grad(u)))+Constant(eps_v))**(rm2/2.0)
+#     eta = 1e14
     # strain rate
     epsilon = 0.5*(nabla_grad(u)+nabla_grad(u).T)
     # SUPG stabilisation unused
@@ -30,9 +31,10 @@ def weak_form_marine(u,p,tau,u_old,p_old,tau_old,u_test,p_test,tau_test,f,g_base
     # stokes equation
     w2 = (-div(u_test)*p+inner(tau,grad(u_test)))*dx - inner(f, u_test)*dx\
          + (g_base+Constant(rho_w*g*dt)*inner(u,nu))*inner(nu, u_test)*(ds(3)+ds(4))\
-         + Constant(C)*((inner(dot(T,u),dot(T,u))+Constant(eps_v))**(rm2/2.0))*inner(dot(T,u),dot(T,u_test))*ds(3)\
+         + Constant(C)*((inner(dot(T,u),dot(T,u))+Constant(eps_v))**(rm2_s/2.0))*inner(dot(T,u),dot(T,u_test))*ds(3)\
          + g_out*dot(nu, u_test)*ds(2)\
          + Constant(1.0/eps_p)*dPi(u,nu)*dot(u_test,nu)*ds(3)
+        #  + g_in*dot(nu, u_test)*ds(1)\
     # constitutive relation (upper-convected rate)     
     w3 = inner(tau+lamda*((tau-tau_old)/dt+dot(u,nabla_grad(tau))-dot(grad(u),tau)-dot(tau, grad(u).T))\
          -2.*eta*epsilon,tau_test)* dx   
@@ -40,7 +42,7 @@ def weak_form_marine(u,p,tau,u_old,p_old,tau_old,u_test,p_test,tau_test,f,g_base
     return Fw
 
 
-def stokes_solve_marine(mesh,F_h,t,w_old,index):
+def stokes_solve_marine(mesh,F_h,t,w_old):
         # Stokes solver using Taylor-Hood elements.
 
         # Define function spaces
@@ -54,7 +56,8 @@ def stokes_solve_marine(mesh,F_h,t,w_old,index):
         (u_old,p_old,tau_old) = w_old.split(True)
         #---------------------Define variational problem------------------------
         # project the velocity field to the new mesh
-        w_prev = project(w_old,W) # used for compute \pdiff{\tau}{t}
+        # w_prev = project(w_old,W) # used for compute \pdiff{\tau}{t}
+        w_prev = interpolate(w_old,W) # used for compute \pdiff{\tau}{t}
         (u_prev,p_prev,tau_prev) = w_prev.split(True)
         # copy the previous step solution w_old to w as an initial guess
         w = Function(W)
@@ -66,7 +69,9 @@ def stokes_solve_marine(mesh,F_h,t,w_old,index):
         (u_test,p_test,tau_test) = TestFunctions(W)
         # Neumann condition at outflow boundary
         h_out = float(F_h(Lngth))        # Surface elevation at outflow boundary
+        h_in = float(F_h(0))        # Surface elevation at outflow boundary
         g_out = Expression('rho_i*g*(h_out-x[1])',rho_i=rho_i,g=g,h_out=h_out,degree=1)
+        g_in = Expression('rho_i*g*(h_in-x[1])',rho_i=rho_i,g=g,h_in=h_in,degree=1)
         # Neumann condition at ice-water boundary
         g_base = Expression('rho_w*g*(sea_level-x[1])',rho_w=rho_w,g=g,sea_level=sea_level+sl_change(t),degree=1)
 
@@ -80,12 +85,12 @@ def stokes_solve_marine(mesh,F_h,t,w_old,index):
         ds = Measure('ds', domain=mesh, subdomain_data=boundary_markers)
 
         # Define weak form and apply boundary conditions on the inflow boundary
-        bcs_u =  apply_bcs(W,boundary_markers)    # Apply Dirichlet BC
+        bcs_u =  apply_bcs(W,F_h,boundary_markers)    # Apply Dirichlet BC
 
         # element size
         # max_h = CellDiameter(mesh)
         # Solve for (u,p).
-        Fw = weak_form_marine(u,p,tau,u_prev,p_prev,tau_prev,u_test,p_test,tau_test,f,g_base,g_out,ds,nu,T)
+        Fw = weak_form_marine(u,p,tau,u_prev,p_prev,tau_prev,u_test,p_test,tau_test,f,g_base,g_in,g_out,ds,nu,T)
 
         #solve(Fw == 0, w, bcs=bcs_u,solver_parameters={"newton_solver":{"relative_tolerance": 1e-14,"absolute_tolerance": 5e-4,\
         #        "maximum_iterations":100,"relaxation_parameter":1.0}},\
@@ -105,12 +110,12 @@ def stokes_solve_marine(mesh,F_h,t,w_old,index):
         newton_prm['krylov_solver']['monitor_convergence'] = False
 
         # relaxation parameter
-        newton_prm['relaxation_parameter'] = 0.5
+        newton_prm['relaxation_parameter'] = 1.00
 
         newton_prm["relative_tolerance"] = 1e-14
         newton_prm["absolute_tolerance"] = 5e-3
-        newton_prm["maximum_iterations"] = 100
-        newton_prm['error_on_nonconvergence'] = False #########!!!!! Dangerous when False
+        newton_prm["maximum_iterations"] = 50
+        newton_prm['error_on_nonconvergence'] = True #########!!!!! Dangerous when False
         solver_nonlinear.solve()
 
         # Compute penalty functional residiual

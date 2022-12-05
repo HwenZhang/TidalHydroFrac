@@ -4,7 +4,7 @@
 # (2) mark the boundaries of the mesh, AND ...
 # (3) create Dirichlet boundary conditions on one or both side walls of the domain.
 #-------------------------------------------------------------------------------
-from params import tol,U0,model,Lngth,Hght,bed_slope
+from params import tol,U0,model,Lngth,Hght,bed_slope,A0,rho_i,g,bed_slope,n
 from geometry import bed
 import numpy as np
 from dolfin import *
@@ -73,17 +73,25 @@ def mark_boundary(mesh):
 
 #------------------------------------------------------------------------------
 
-def apply_bcs(W,boundary_markers):
+def apply_bcs(W,Fh,boundary_markers):
     # Apply inflow and outflow boundary conditions to the system.
     # These are applied to the horizontal velocity component.
     angle = np.arctan(bed_slope)
+    # linear viscosity
+
+    # Dirichlet BC: inflow velocity set-up
+    # u_left = Expression('+scos*(u_surf-2.0*A/(n+1)*(pow(rho_i*g*ssin,n))*pow((h-x[1])*scos,n+1))',\
+    #     degree=2, scos=np.cos(angle), ssin=np.sin(angle), n=int(n), u_surf=U0, A=A0,rho_i=rho_i, g=g, h=float(Fh(0)))
+    # v_left = Expression('-ssin*(u_surf-2.0*A/(n+1)*(pow(rho_i*g*ssin,n))*pow((h-x[1])*scos,n+1))',\
+    #     degree=2, scos=np.cos(angle), ssin=np.sin(angle), n=int(n), u_surf=U0, A=A0,rho_i=rho_i, g=g, h=float(Fh(0)))
 
     bcu1 = DirichletBC(W.sub(0).sub(0), Constant(U0*np.cos(angle)), boundary_markers,1)
-    bcu2 = DirichletBC(W.sub(0).sub(0), Constant(U0), boundary_markers,2)
-    bcu3 = DirichletBC(W.sub(0).sub(1), Constant(-U0*np.sin(angle)), boundary_markers,1)
+    # bcu1 = DirichletBC(W.sub(0).sub(0), u_left, boundary_markers,1)
+    bcu2 = DirichletBC(W.sub(0).sub(1), Constant(-U0*np.sin(angle)), boundary_markers,1)
+    # bcu3 = DirichletBC(W.sub(0).sub(1), v_left, boundary_markers,1)
 
     if model == 'lake':
         BC = [bcu1,bcu2]
     elif model == 'marine':
-        BC = [bcu1,bcu3]
+        BC = [bcu1]
     return BC
