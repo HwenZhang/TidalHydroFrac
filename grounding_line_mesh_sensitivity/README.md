@@ -8,12 +8,24 @@ FEniCS scipts to model the tidal response of the Amery Ice Shelf.
   shear modulus: $\mu=0.18\times 10^{9}$ $\text{Pa}$
 
 # Boundary condition
-Left boundary inflow: U0 = 9m/y in x-direction
-Right boundary: ice overburden stress
-Top boundary: free surface
-Bottom boundary: 
-  
+## Left boundary 
+Constant inflow: $U_0 = 9$ m/yr in x-direction.
+## Right boundary
+Ice overburden stress
+\begin{equation}
+\end{equation}
 
-Length = 20km
-Height = 500m
-Tidal amplitude = 1.0 m
+## Top boundary
+Free surface.
+
+## Bottom boundary
+### Ice-bedrock interface
+Penalty method.
+
+### Ice-ocean interface
+Hydrostatic pressure.
+  
+# Geometry
+Length: $L=20$ km
+Height: $H=500$ m
+Tidal amplitude: $A=1.0$ m
