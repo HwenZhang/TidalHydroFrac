@@ -1,7 +1,7 @@
 # TidalHydroFrac
 
-FEniCS scipts to model the tidal response of the Amery Ice Shelf. Below is the schematic showing the model set-up.
-
+FEniCS scipts to model the tidal response of the Amery Ice Shelf. Below is the schematic showing the model set-up. The code is modified from the variational formulation proposed by Stubblefield et al., 2019. Below attached the link to the paper:
+https://www.cambridge.org/core/journals/journal-of-fluid-mechanics/article/abs/variational-formulation-of-marine-icesheet-and-subglaciallake-groundingline-dynamics/70AA4C7F565E3C8B5481DFA3B5E394F0.
 
 ![Image text](https://github.com/HwenZhang/TidalHydroFrac/blob/147148f5916b7197c94a07abe23951a49d448c2f/grounding_line_mesh_sensitivity/image/schematic.png)
 
@@ -73,3 +73,6 @@ Hydrostatic pressure, which is superposed by a base state sea level $l_0$ and a 
 ```math
 \sigma_{nn} = -\rho_w g \left[l_0 + A sin\left(2\pi f t\right)\right].
 ```
+
+# Reference
+Stubblefield, A. G.; Spiegelman, M.; Creyts, T. T. Variational Formulation of Marine Ice-Sheet and Subglacial-Lake Grounding-Line Dynamics. Journal of Fluid Mechanics 2021, 919, A23.
