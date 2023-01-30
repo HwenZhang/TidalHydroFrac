@@ -66,7 +66,7 @@ Penalty method to guarantee impenetrability. Friction is applied using a nonline
 ```math
 \sigma_{nt}=-C\left[(\boldsymbol u\cdot \boldsymbol t)^2+\delta_s\right]^{-\frac{1}{3}}(\boldsymbol u\cdot \boldsymbol t),
 ```
-where $\boldsymbol t$ is the tangential vector, $\delta_s=1\times 10^{-19}$ is the regularisation parameter. 
+where $C$ is a sliding constant which is set to measure the observed surface velocity. $\boldsymbol t$ is the tangential vector, $\delta_s=1\times 10^{-19}$ is the regularisation parameter. 
 
 ### Ice-ocean interface
 Hydrostatic pressure, which is superposed by a base state sea level $l_0$ and a tidal perturbation, represented by a sinusoidal function.
