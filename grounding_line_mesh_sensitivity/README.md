@@ -1,6 +1,8 @@
 # TidalHydroFrac
 
-FEniCS scipts to model the tidal response of the Amery Ice Shelf.
+FEniCS scipts to model the tidal response of the Amery Ice Shelf. Below is the schematic showing the model set-up.
+![Image text](https://github.com/HwenZhang/TidalHydroFrac/blob/147148f5916b7197c94a07abe23951a49d448c2f/grounding_line_mesh_sensitivity/image/schematic.png)
+
 
 # Ice Rheology
 ## Incompressible Viscoelasticity
