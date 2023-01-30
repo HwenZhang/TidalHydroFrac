@@ -1,11 +1,11 @@
 # TidalHydroFrac
 
-Scipts to model the tidal response of the Amery Ice Shelf.
+FEniCS scipts to model the tidal response of the Amery Ice Shelf.
 
 # Ice Rheology
 ## Incompressible Viscoelasticity
-  viscosity: A=3e-24, n=3
-  shear modulus: mu=0.18e9
+  nonlinear viscosity $\eta$: A=3e-24, n=3
+  shear modulus: $\mu=0.18\times 10^{9}$ $\text{Pa}$
 
 # Boundary condition
 Left boundary inflow: U0 = 9m/y in x-direction
