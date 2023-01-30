@@ -12,9 +12,7 @@ FEniCS scipts to model the tidal response of the Amery Ice Shelf.
 Constant inflow: $U_0 = 9$ m/yr in x-direction.
 ## Right boundary
 Ice overburden stress
-\begin{equation}
-  \sigma_{xx}=\rho_i g \left(H-z\right)
-\end{equation}
+$$\sigma_{xx}=\rho_i g \left(H-z\right)$$
 
 ## Top boundary
 Free surface.
