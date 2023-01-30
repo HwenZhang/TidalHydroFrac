@@ -43,7 +43,7 @@ $$\boldsymbol u\cdot \hat{\boldsymbol x} = U_0 = 9\text{m/yr}$$ in x-direction.
 
 ## Right boundary
 Ice overburden stress
-$$\sigma_{xx}=-\rho_i g \left(h\left(x\right)-z\right),$$
+$$\sigma_{xx}=-\rho_i g \left[h\left(x\right)-z\right],$$
 representing purely floating ice shelf without internal deformation.
 
 ## Top and bottom boundary
