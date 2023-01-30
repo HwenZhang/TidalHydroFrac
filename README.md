@@ -38,8 +38,7 @@ Shear modulus $\mu=0.18\times 10^{9}$ $\text{Pa}$.
 # Boundary condition
 
 ## Left boundary 
-Constant inflow
-$$\boldsymbol u\cdot \hat{\boldsymbol x} = U_0 = 9\text{m/yr}$$ in x-direction.
+Constant inflow $\boldsymbol u\cdot \hat{\boldsymbol x} = U_0 = 9\text{m/yr}$ in x-direction.
 
 ## Right boundary
 Ice overburden stress
