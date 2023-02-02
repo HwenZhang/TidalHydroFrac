@@ -1,5 +1,5 @@
 # This file contains the functions needed for solving the Stokes system.
-from params import rho_i,g,tol,B,rm2_s,rm2,rho_w,C,eps_p,eps_v,sea_level,dt,quad_degree,Lngth,U0,mu,eps_vs
+from params import rho_i,g,tol,B,rm2_s,rm2,rho_w,C,eps_p,eps_v,sea_level,dt,quad_degree,Lngth,U0,mu,eps_vs,test
 from boundaryconds import mark_boundary,apply_bcs
 from hydrology import Vdot, sl_change
 import numpy as np
@@ -19,8 +19,8 @@ def Pi(u,nu):
 def weak_form_marine(u,p,tau,u_old,p_old,tau_old,u_test,p_test,tau_test,f,g_base,g_in,g_out,ds,nu,T):
     # Weak form of the marine ice sheet problem
     # viscosity (non-newtonian fluid)
+    # Stubblefield regularisation
     eta = B*(inner(sym(grad(u)),sym(grad(u)))+Constant(eps_v))**(rm2/2.0)
-
     # strain rate
     epsilon = 0.5*(nabla_grad(u)+nabla_grad(u).T)
     # SUPG stabilisation unused
@@ -34,7 +34,7 @@ def weak_form_marine(u,p,tau,u_old,p_old,tau_old,u_test,p_test,tau_test,f,g_base
          + Constant(C)*((inner(dot(T,u),dot(T,u))+Constant(eps_v))**(rm2_s/2.0))*inner(dot(T,u),dot(T,u_test))*ds(3)\
          + g_out*dot(nu, u_test)*ds(2)\
          + Constant(1.0/eps_p)*dPi(u,nu)*dot(u_test,nu)*ds(3)
-      
+        #  + g_in*dot(nu, u_test)*ds(1)\
     # constitutive relation (upper-convected rate)     
     w3 = inner(tau+lamda*((tau-tau_old)/dt+dot(u,nabla_grad(tau))-dot(grad(u),tau)-dot(tau, grad(u).T))\
          -2.*eta*epsilon,tau_test)* dx   
@@ -104,18 +104,17 @@ def stokes_solve_marine(mesh,F_h,t,w_old):
         prm = solver_nonlinear.parameters
         newton_prm = prm['newton_solver']
 
-        newton_prm['linear_solver'] = 'umfpack'
+        newton_prm['linear_solver'] = 'lu'
         newton_prm['krylov_solver']['maximum_iterations'] = 2000
-        newton_prm['krylov_solver']['nonzero_initial_guess'] = True
+        newton_prm['krylov_solver']['nonzero_initial_guess'] = False
         newton_prm['krylov_solver']['monitor_convergence'] = False
 
         # relaxation parameter
-        newton_prm['relaxation_parameter'] = 0.40
-
+        newton_prm['relaxation_parameter'] = 0.25
         newton_prm["relative_tolerance"] = 1e-14
         newton_prm["absolute_tolerance"] = 5e-3
-        newton_prm["maximum_iterations"] = 150
-        newton_prm['error_on_nonconvergence'] = True   #########!!!!!
+        newton_prm["maximum_iterations"] = 200
+        newton_prm['error_on_nonconvergence'] = test    #########!!!!! Dangerous when False
         solver_nonlinear.solve()
 
         # Compute penalty functional residiual
@@ -128,7 +127,6 @@ def stokes_solve_marine(mesh,F_h,t,w_old):
 def get_zero_m(mesh):
         # Get zero element of function space for marine ice sheet problem.
         # Only used for setting initial conditions; see main.py.
-
         # Define function spaces
         P1 = FiniteElement('CG',triangle,1)     # Pressure
         P2 = VectorElement('CG',triangle,2)     # Velocity

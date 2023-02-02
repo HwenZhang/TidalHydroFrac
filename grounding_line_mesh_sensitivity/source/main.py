@@ -23,7 +23,7 @@ from plotting import *
 import scipy.integrate as scpint
 import os 
 from params import (rho_i,g,tol,t_final,nt_per_year,Lngth,Hght,nt,dt,model,
-                    print_convergence,X_fine,nx,tides,DX_s,model_setup)
+                    print_convergence,X_fine,nx,tides,DX_s,model_setup,test)
 from params import (rho_i,g,tol,B,rm2,rho_w,C,eps_p,eps_v,sea_level,dt,
                     quad_degree,Lngth,U0,mu,tide_amplitude,resultsname,casename)
 
@@ -54,15 +54,19 @@ vtkfile_res = File(resultsname+'/'+casename+'/field_plot_data/stress_res.pvd')  
 fname = open('residual.txt','w')
 
 # ======================= import the mesh ==========================
-meshname = model+'_DX'+str(int(DX_s))+'_Lngth'+str(int(Lngth))+'_Slope0_01.xdmf'
-meshdict = model+'_DX'+str(int(DX_s))+'_Lngth'+str(int(Lngth))+'_Slope0_01'
-new_mesh = File('tides'+'_DX'+str(int(DX_s))+'_Lngth'+str(int(Lngth))+'.xml')
+# meshname = model+'_DX'+str(int(DX_s))+'_Lngth'+str(int(Lngth))+'_Slope0_01.xdmf'
+# meshdict = model+'_DX'+str(int(DX_s))+'_Lngth'+str(int(Lngth))+'_Slope0_01'
+# new_mesh = File('tides'+'_DX'+str(int(DX_s))+'_Lngth'+str(int(Lngth))+'_U0'+str(int(U0*3.154e7))+'.xml')
 
-mesh = Mesh()
-with XDMFFile(MPI.comm_world, "./meshes/"+meshdict+'/'+meshname) as meshfile:
-    meshfile.read(mesh)
-    mvc = MeshValueCollection("size_t", mesh, mesh.topology().dim() - 1)
-print("The MeshValueCollection: ", mvc)
+# mesh = Mesh()
+# with XDMFFile(MPI.comm_world, "./meshes/"+meshdict+'/'+meshname) as meshfile:
+#     meshfile.read(mesh)
+#     mvc = MeshValueCollection("size_t", mesh, mesh.topology().dim() - 1)
+# print("The MeshValueCollection: ", mvc)
+
+# import the xml mesh
+mesh = Mesh('./'+'tides'+'_DX'+str(int(DX_s))+'_Lngth'+str(int(Lngth))+'.xml')
+
 
 # Define arrays for saving surfaces, lake volume, water pressure, and
 # grounding line positions over time.
@@ -92,6 +96,11 @@ for i in range(nt):
         mesh,F_s,F_h,s_mean_i,h_mean_i,XL,XR = mesh_routine(w,mesh,dt,interface,surface)
 
     # Solve the Stokes problem.
+    # load the initial guess saved before
+    if t==0 and model == 'marine' and tides == 'on':
+        fFile = HDF5File(MPI.comm_world,"w_init_DX"+str(int(DX_s))+"_L"+str(int(Lngth))+".h5","r")
+        fFile.read(w,"/f")
+        fFile.close()
     # Returns solutions "w" and penalty functional residual "P_res_i"
     w,P_res_i,_eta = stokes_solve_marine(mesh,F_h,t,w)
 
@@ -100,7 +109,7 @@ for i in range(nt):
     mesh,F_s,F_h,s_mean_i,h_mean_i,XL,XR = mesh_routine(w,mesh,dt,F_s,F_h)
     # Save quantities of interest.
     P_res[i] = P_res_i                        # residual                      
-    s_mean[i] = s_mean_i                      
+    s_mean[i] = s_mean_i                      #
     h_mean[i] = h_mean_i
     x_left[i] = XL                            # left grounding line
     x_right[i] = XR                           # right grounding line
@@ -121,8 +130,13 @@ for i in range(nt):
     
     # Update time
     t += dt
+    # # save the solution
+    if model == 'marine' and tides == 'off':
+        fFile = HDF5File(MPI.comm_world,"w_init_DX"+str(int(DX_s))+"_L"+str(int(Lngth))+".h5","w")
+        fFile.write(w,"/f")
+        fFile.close()
 
-    # Print information of grounding line position.
+    # Print information of interest.
     print('Left grounding line: '+str(x_left[i]/1000.0)+' km')
     print('Right grounding line: '+str(x_right[i]/1000.0)+' km')
 
@@ -131,7 +145,7 @@ t_arr = np.linspace(0,t_final,num=int(nt_per_year*t_final/3.154e7))
 
 # save the mesh when initiating the mesh
 if model == 'marine' and tides == 'off':
-    XDMFFile(MPI.comm_world, "./meshes/"+'tides'+'_DX'+str(int(DX_s))+'_Lngth'+str(int(Lngth))+'.xdmf').write(mesh)
+    XDMFFile(MPI.comm_world, "./meshes/"+'tides'+'_DX'+str(int(DX_s))+'_Lngth'+str(int(Lngth))+'_U0'+str(int(U0*3.154e7))+'.xdmf').write(mesh)
     new_mesh << mesh
 
 np.savetxt(resultsname+'/'+casename+'/line_plot_data/Gamma_s',Gamma_s)    # see definition above

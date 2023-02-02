@@ -9,14 +9,14 @@ import numpy as np
 # plotting flag
 model_setup = 'tides_paper'
 
-# Set model to 'lake' for subglacial lake or 'marine' for marine ice sheet:
+# Set model to 'lake' for subglacial lake or 'marine' for marine ice sheet
 model = 'marine'
 resultsname = 'results' # directory name
-casename = 'stokes_tidal_response_U09ma_L20000_A3e_24_n3_0_delta1e_15_tide0_00_C1e_7_DX12'
+casename = 'stokes_tidal_response_U09ma_L20000_A3e_24_n3_0_delta1e_15_tide1_00_C1e_7_DX12'
 
 # For the marine ice sheet setup, turn the tidal cycle 'on' or 'off'.
 # Turning tides 'on' defaults to a simulation time of ~1 week:
-tides = 'off'
+tides = 'on'
 
 # Turn 'on' or 'off' real-time plotting that saves a png figure called 'surfs' at
 # each time step of the free surface geometry.
@@ -24,6 +24,9 @@ realtime_plot = 'off'
 
 # Turn 'on' or 'off' Newton convergence information:
 print_convergence = 'on'
+
+# Convergence: error on divergence when True 
+test = True
 
 # Mesh resolution at the lower boundary
 DX_s = 12.5                   # Element width at lower boundary (in meters)
@@ -79,12 +82,12 @@ sea_level = Hght*(917.0/1000.0)    # Sea level elevation (m).
                                    # (Initial sea level for the tides problem)
                                    
 # Time-stepping parameters for tidal problems
-nt_per_year =  50*1000               # Number of timesteps per year. (tidal simulation)
-t_final = 10*0.5/365*3.154e7/1e2         # Final time (yr*sec_per_year). (tidal simulation)
+nt_per_year =  50*1000              # Number of timesteps per year. (tidal simulation)
+t_final = 10*0.5/365*3.154e7/1e0    # Final time (yr*sec_per_year). (tidal simulation)
 
 # no tide simulation
 # nt_per_year = 0.5*1000              # Number of timesteps per year. (tidal simulation)
-# t_final = 2.0*3.154e7               # Final time (yr*sec_per_year). (tidal simulation)
+# t_final = 2.5*3.154e7           # Final time (yr*sec_per_year). (tidal simulation)
 
 nt = int(nt_per_year*t_final/3.154e7) # Number of time steps
 dt = t_final/nt                       # Timestep size
