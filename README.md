@@ -1,77 +1,70 @@
-# TidalHydroFrac
-
-FEniCS scipts to model the tidal response of the Amery Ice Shelf. Below is the schematic showing the model set-up. The code is modified from the variational formulation proposed by Stubblefield et al., 2019. Below attached the link to the paper:
-https://www.cambridge.org/core/journals/journal-of-fluid-mechanics/article/abs/variational-formulation-of-marine-icesheet-and-subglaciallake-groundingline-dynamics/70AA4C7F565E3C8B5481DFA3B5E394F0.
-
+# Overview
 ![Image text](https://github.com/HwenZhang/TidalHydroFrac/blob/147148f5916b7197c94a07abe23951a49d448c2f/grounding_line_mesh_sensitivity/image/schematic.png)
 
-# Governing equations
+The repository contains the Python scripts for the manuscript "Viscoelastic mechanics of tidally induced lake drainage in the Amery grounding zone", which is submitted to Earth and Planetary Science Letters. The code is modified from the Python code for simulating viscous grounding line migration by Aaron Stubblefield:
 
-We solve for combined $\left(\boldsymbol u, p, \boldsymbol \tau\right)$, where $\boldsymbol{u}$ is the velocity, $p$ is the pressure, and $\boldsymbol\tau$ is the deviatoric stress. The function space is shown below.
-```
-P1 = FiniteElement('CG',triangle,1)     # Pressure
-P2 = VectorElement('CG',triangle,2)     # Velocity
-P3 = TensorElement("CG",triangle,2)    # Stress
-```
-## Mass and momentum conservation
-Mass and momentum conservation gives
-```math
-\begin{gathered}
-\boldsymbol{\nabla} \cdot \boldsymbol{u}=0 \\
-\boldsymbol{\nabla} \cdot[-p \boldsymbol{I}+2 \eta(\boldsymbol{u}) \dot{\boldsymbol\varepsilon}]+\rho_i \boldsymbol{g}=0
-\end{gathered}
-```
-where $\dot{\boldsymbol\varepsilon}$ is the strain rate, $\rho_i$ is the ice density and $\boldsymbol g$ is gravitational acceleration.
+[2021: Variational formulation of marine ice-sheet and subglacial-lake grounding-line dynamics](https://github.com/agstub/grounding-line-methods/tree/v1.0.0).
 
-## Ice rheology: incompressible viscoelasticity
-Ice is assumed to be incompressible upper-convective Maxwell-viscoelastic fluid. The constitutive law is
-$$\boldsymbol{\tau}+\lambda\left(\frac{\partial \boldsymbol{\tau}}{\partial t}+\boldsymbol{u} \cdot \nabla \boldsymbol{\tau}-(\nabla \boldsymbol{u})^T \cdot \boldsymbol{\tau}-\boldsymbol{\tau} \cdot \nabla \boldsymbol{u}\right)-2 \eta(\boldsymbol{u}) \dot{\boldsymbol\varepsilon}=0$$, where $\lambda=\dfrac{\eta}{\mu}$ is the Maxwell time. In the computation, the characteristic Maxwell time is about $8~\text{hr}$.
+# Contents
+The repository contains the essential scripts to simulate the tidal response in the reference case, data used in the manuscript and scripts to make the figures in the manuscript.
 
-### Nonlinear viscosity 
-```math
-\eta(\boldsymbol{u})=\frac{1}{2} B\left(|\boldsymbol{D}(\boldsymbol{u})|^2+\delta\right)^{-\frac{1}{3}},
-```
-where $B=2^{(n-1)/2n} A^{-1/n}$. In the computation, we use $A=3\times 10^{-24}~\text{Pa}^{-3}\cdot\text{s}^{-1}$, $n=3$. Note that $\delta=1\times 10^{-15}$ is the regularisation parameter to prevent infinite viscosity. 
-### Elasticity
-Shear modulus $\mu=0.18\times 10^{9}$ $\text{Pa}$.
+### Scripts
+* **create_mesh.py** is used to produce a mesh with piecewise-linear bottom profile, which will be used for simulations of long-term ice flow.
+* **figure_n.ipynb**(n=1~8) are the scripts used to make figures in the manuscript. 
 
-# Boundary condition
+### Meshes
+Gmsh (https://gmsh.info/) is used for mesh generation in the code.
+* **marine_DX12_Lngth20000_Slope2e_2** contains the mesh file for mesh initiation. 
 
-## Left boundary 
-Constant inflow $\boldsymbol u\cdot \hat{\boldsymbol x} = U_0 = 9\text{m/yr}$ in x-direction.
+* **tides_DX12_Lngth20000_Slope2e_2_U09.xml** is used for simulating the reference case in the manuscript. The mesh file should be loaded with the corresponding intial state stored in **w_init_DX12_L20000_Slope0_02_U09.h5**.
 
-## Right boundary
-Ice overburden stress
-$$\sigma_{xx}=-\rho_i g \left[h\left(x\right)-z\right],$$
-representing purely floating ice shelf without internal deformation.
+### Source files
+The directory contains essential Python scripts.
+* **cases** constains the parameter files for different cases: **params_mesh.py** is for mesh initiation, and **params_tide.py** is for tidal-response simulation. 
 
-## Top and bottom boundary
-Note in the computation, we use ALE method to catch the free surface movement. Free surface is governed by the kinematic equations
-```math
-\begin{gathered}
-\frac{\partial h}{\partial t}(x, t)=\sqrt{1+\left(\frac{\partial h}{\partial x}\right)^2} u_n(x, h, t) \\
-\frac{\partial s}{\partial t}(x, t)=-\sqrt{1+\left(\frac{\partial s}{\partial x}\right)^2} u_n(x, s, t),
-\end{gathered}
-```
-where $h\left(x\right)$ and $s\left(x\right)$ represent the top and bottom surfaces of the ice shelf. The internal mesh is smoothed at each time step using
-```
-mesh.smooth()
-```
-.
+* For details of other files, the reader is referred to our manuscript and [Stubblefield et al., 2021](https://github.com/agstub/grounding-line-methods/tree/v1.0.0).
 
-## Bottom boundary
-### Ice-bedrock interface
-Penalty method to guarantee impenetrability. Friction is applied using a nonlinear sliding law
-```math
-\sigma_{nt}=-C\left[(\boldsymbol u\cdot \boldsymbol t)^2+\delta_s\right]^{-\frac{1}{3}}(\boldsymbol u\cdot \boldsymbol t),
-```
-where $C$ is a sliding constant which is set to measure the observed surface velocity. $\boldsymbol t$ is the tangential vector, $\delta_s=1\times 10^{-19}$ is the regularisation parameter. 
+### Amery_data
+The directory constains the water-free, 2-m WorldView-1 (https://earth.esa.int/eogateway/missions/worldview-1) DEM data of the supraglacial lake in the Amery grounding zone, where tidally induced lake drainage was observed.
 
-### Ice-ocean interface
-Hydrostatic pressure, which is superposed by a base state sea level $l_0$ and a tidal perturbation, represented by a sinusoidal function.
-```math
-\sigma_{nn} = -\rho_w g \left[l_0 + A sin\left(2\pi f t\right)\right].
-```
+# How to run
+Here we present the tips to initiate the mesh and simulate the reference case.
+
+## Mesh initiation
+Mesh initiation is essentially modelling the low-term marine ice sheet flow to get a steady state, which will be used as the initial condition for tidal-response simulation. The steps are:
+* Replace the script **params.py** with **params_mesh.py** from **./source/cases/**.
+* Rename **params_mesh.py** as **params.py** and set relevant parameters.
+* Run the main file from the parent directory: `python3 ./source/main.py`.
+* The procued mesh and initial conditions are all saved under **./results/{casename}**, where **{casename}** is specified in **params.py**.
+
+## Reference case
+The reference case represents the tidal response of a viscoelastic marine ice sheet with ocean tides whose amplitude is $1$m.
+### Numerical simulation
+The repository provides the code and mesh file to reproduce the reference case in the manuscript. The initial state and mesh are attached. The basic workflow is
+* Download the file from GitHub and install Docker (https://www.docker.com/).
+* Run the FEniCS Docker image. An example command for the author is
+`docker run -ti --name fenics-grounding-line-test -w /home/fenics -v /Users/hwenzhang/fenicsproject/grounding_line_test:/home/fenics/shared -d -p 127.0.0.1:8888:8888  quay.io/fenicsproject/stable:latest`.
+* Run the main file from the parent directory: `python3 ./source/main.py`.
+* The results are saved under the directory with the chosen casename under **results** directory. The subdirectory **field plot data** contains the field of velocity, pressure and deviatoric stress. The subdirectory **line plot data** contains the time series, i.e. grounding line positions and surface profile.
+
+## Postprocessing and Visulisation
+Postprocessing includes calculating $\sigma_{xx,max}$ on the top surface, calculting stress intensity factor $K_1$ and setting up the model-based criterion. These steps are included in the scripts to make figures.
+
+The figures in the manuscript are plotted using matplotlib (https://matplotlib.org/stable/), with the Python files given in **./scripts**. To run these codes requires that the relevant results are obtained and stored in **./results** with appropriate file names. Then make figure $n$ by running the corresponding jupyter notebooks.
+
+## Other cases
+For cases with a different bedslope angle or rheological parameters, please first run **create_mesh.py**: `python3 ./scripts/create_mesh.py` to create a .xdmf mesh file, and then initiate the mesh by following above instructions. After getting the mesh and initial state, perform tidal-response simulations. Please adjust the solver parameters accordingly to maintain good solver performance.
+
 
 # Reference
-Stubblefield, A. G.; Spiegelman, M.; Creyts, T. T. Variational Formulation of Marine Ice-Sheet and Subglacial-Lake Grounding-Line Dynamics. Journal of Fluid Mechanics 2021, 919, A23.
+Stubblefield, A.G., Spiegelman, M., Creyts, T.T., 2021. Variational formulation of marine ice-sheet
+and subglacial-lake grounding-line dynamics. Journal of Fluid Mechanics 919. doi: http://dx.doi.org/10.1017/jfm.2021.394.
+
+Trusel, L.D., Pan, Z., Moussavi, M., 2022. Repeated tidally induced hydrofracture of a supraglacial
+lake at the amery ice shelf grounding zone. Geophysical Research Letters 49, e2021GL095661. doi: http://dx.doi.org/10.1029/2021GL095661.
+
+
+# Acknowledgements
+The authors thank Luke Trusel and Anton Fatula for help in interpretation of their lake-drainage observations, and Ian Hewitt, Ching-Yao Lai, and the RIFT-O-MAT group for discussions on grounding line dynamics and model set-up. We also thank Dave May for valuable suggestions and codes for data visualisation. 
+
+This research received funding from the European Research Council under Horizon 2020 research and innovation program grant agreement number 772255. For more details about the group, the readers are referred to [FOALAB](https://foalab.earth.ox.ac.uk/index.php).
