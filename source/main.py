@@ -1,38 +1,34 @@
 #-------------------------------------------------------------------------------
-# This program solves a nonlinear Stokes flow problem describing groundning line
-# dynamics in two settings:
-#
-# (1) A marine ice sheet, OR ...
-# (2) A subglacial lake that is (potentially) undergoing water volume changes.
-#
-# Choose model setup (1) or (2) in the params.py fßile.
-#
-# See the JFM manuscript for a complete formulation of the problem.
+# This program solves a nonlinear viscoelastic Stokes flow problem, and is modified 
+# from the code by Stubblefield et al., 2021 for viscous contact problem. It is 
+# used to initiate the mesh, simulate the tidal response with varying tidal 
+# amplitude (A=0~1m), thus construct the model-based criterion. 
+
+# This program can be modified to conduct mesh initiation and the sensitivity 
+# analysis using the values of parameters provided in the manuscript.
+
+# For details, the readers are referred to the README file and the manuscript
+# submitted to Earth and Planetary Science Letters.
 #-------------------------------------------------------------------------------
 import sys
-sys.path.insert(0, './scripts')
-
 from dolfin import *
 from fenics import *
-import matplotlib.pyplot as plt
 import numpy as np
 from stokes import stokes_solve_marine,get_zero_m
 from geometry import interface,bed,surface
 from meshfcns import mesh_routine
-from plotting import *
 import scipy.integrate as scpint
 import os
-from params import (rho_i,g,tol,t_final,nt_per_year,Lngth,Hght,nt,dt,model,
-                    print_convergence,X_fine,nx,tides,DX_s,model_setup,test)ß
-from params import (rho_i,g,tol,B,rm2,rho_w,C,eps_p,eps_v,sea_level,dt,
-                    quad_degree,Lngth,U0,mu,tide_amplitude,resultsname,casename)
+from params import (tol,t_final,nt_per_year,Lngth,Hght,nt,dt,
+                    print_convergence,X_fine,nx,tides,DX_s,checkpoint)
+from params import (tol,dt,Lngth,U0,save_interval,resultsname,casename)
 
 #--------------------Initial conditions-----------------------------------------
 # Compute initial mean elevation of ice-water interface and initial lake volume.
 s_mean0 = np.mean(interface(X_fine)[interface(X_fine)-bed(X_fine)>tol])
 lake_vol_0 = scpint.quad(lambda x: interface(x)-bed(x),0,Lngth,full_output=1)[0]
-#-------------------------------------------------------------------------------
 
+#--------------------Create result folders--------------------------------------
 path = []
 path.append(resultsname+'/' + casename )
 path.append(resultsname+'/' + casename + '/field_plot_data' )
@@ -46,20 +42,31 @@ if print_convergence == 'off':
     set_log_level(40)    # Suppress Newton convergence information if desired.
 print('casename is ' + casename)
 
-# ======================= Create VTK files ==========================
+# ======================= Create VTK files =========================
 vtkfile_u = File(resultsname+'/'+casename+'/field_plot_data/u.pvd')            # velocity
 vtkfile_p = File(resultsname+'/'+casename+'/field_plot_data/p.pvd')            # pressure
 vtkfile_sigma = File(resultsname+'/'+casename+'/field_plot_data/sigma.pvd')    # stress
 vtkfile_strain_rate = File(resultsname+'/'+casename+'/field_plot_data/strain_rate.pvd')        # strain
-fname = open('residual.txt','w')
-
 # ======================= import the mesh ==========================
-# import the xml mesh
-mesh = Mesh('./meshes/'+'tides'+'_DX'+str(int(DX_s))+\
-            '_Lngth'+str(int(Lngth))+'_Slope0_02'+'_U'+"{:0>2d}".format(int(U0*3.154e7))+'.xml')
-new_mesh = File(resultsname+'/'+casename+'/tides'+'_DX'+str(int(DX_s))+'_Lngth'+str(int(Lngth)) + '_Slope0_02'\
-            +'_U'+"{:0>2d}".format(int(U0*3.154e7))+'.xml')
+# Import the xml mesh
+if tides == 'on':
+    # tidal-response simulation
+    mesh = Mesh('./meshes/'+'tides_DX'+str(int(DX_s))+\
+                '_Lngth'+str(int(Lngth))+'_Slope2e_2'+'_U'+"{:0>2d}".format(int(U0*3.154e7))+'.xml')
+elif tides == 'off':
+    # mesh name
+    meshname = 'marine_DX'+str(int(DX_s))+'_Lngth'+str(int(Lngth))+'_Slope2e_2'
+    # read in the mesh
+    mesh = Mesh()
+    with XDMFFile(MPI.comm_world, "./meshes/"+meshname+'/'+ meshname+'.xdmf') as meshfile:
+        meshfile.read(mesh)
+        mvc = MeshValueCollection("size_t", mesh, mesh.topology().dim() - 1)
+    print("The MeshValueCollection: ", mvc)
+# Save the mesh
+new_mesh = File(resultsname+'/'+casename+'/tides'+'_DX'+str(int(DX_s))+\
+                '_Lngth'+str(int(Lngth))+'_Slope2e_2'+'_U'+"{:0>2d}".format(int(U0*3.154e7))+'.xml')
 
+# ======================= result arrays =============================
 # Define arrays for saving surfaces, lake volume, water pressure, and
 # grounding line positions over time.
 Gamma_s = np.zeros((nx,nt))       # Basal surface
@@ -82,24 +89,23 @@ for i in range(nt):
         F_h = lambda x: Hght                  # Ice-air surface function
         F_s = lambda x: interface(x)          # Lower surface function
 
-        if model == 'marine':
-            w_0 = get_zero_m(mesh)              # Placeholder for first iteration,
+        w_0 = get_zero_m(mesh)                # Placeholder for first iteration,
                                               # used for computing surface elevation functions
         mesh,F_s,F_h,s_mean_i,h_mean_i,XL,XR = mesh_routine(w_0,mesh,dt,interface,surface)
 
     # Solve the Stokes problem.
-    # Returns solutions "w" and penalty functional residual "P_res_i"
-    if t==0 and model == 'marine' and tides == 'on':
-        fFile = HDF5File(MPI.comm_world,"w_init_DX"+str(int(DX_s))+"_L"+str(int(Lngth))+"_Slope0_02"\
+    # Load the initial state if simulating tidal response.
+    if t==0 and tides == 'on':
+        fFile = HDF5File(MPI.comm_world,"./meshes/w_init_DX"+str(int(DX_s))+"_L"+str(int(Lngth))+"_Slope2e_2"\
         +'_U'+"{:0>2d}".format(int(U0*3.154e7))+'.h5',"r")
         fFile.read(w_0,"/f")
         fFile.close()
 
-    # Deep copy of the mesh at last step
+    # Deep copy of the solution at previous step.
     w,P_res_i,_strain_rate = stokes_solve_marine(mesh,F_h,t,w_0)
     w.set_allow_extrapolation(True)
 
-    # save the old mesh and solution for next step calculation
+    # Save the old mesh and solution for next step calculation.
     mesh_0 = Mesh(mesh)
     w_0 = get_zero_m(mesh_0)
     w_0.vector().set_local(w.vector().get_local())
@@ -107,7 +113,6 @@ for i in range(nt):
 
     # Solve the surface kinematic equations, move the mesh, and compute the
     # grounding line positions.
-
     mesh,F_s,F_h,s_mean_i,h_mean_i,XL,XR = mesh_routine(w,mesh,dt,F_s,F_h)
 
     # Save quantities of interest.
@@ -119,7 +124,7 @@ for i in range(nt):
     Gamma_s[:,i] = F_s(X_fine)                # bottom boundary
     Gamma_h[:,i] = F_h(X_fine)                # surface boundary
 
-    # Save Stokes solution
+    # Save Stokes solution.
     _u, _p, _sigma = w.split()
     _u.rename("vel", "U")
     _p.rename("press","P")
@@ -130,27 +135,44 @@ for i in range(nt):
     vtkfile_p << (_p,t)
     vtkfile_sigma << (_sigma,t)
     vtkfile_strain_rate << (_strain_rate,t)
-    # Vtkfile_stress_rate << (_stress_rate,t)
 
-    # Update time
+    # Update time.
     t += dt
-    # Save the checkpoint
-    if model == 'marine':
-        fFile = HDF5File(MPI.comm_world,resultsname+'/'+casename+"/w_init_DX"+str(int(DX_s))+"_L"+str(int(Lngth))+".h5","w")
-        fFile.write(w_0,"/f")
-        fFile.close()
+    # Save solution
+    fFile = HDF5File(MPI.comm_world,resultsname+'/'+casename+"/w_init_DX"+str(int(DX_s))+"_L"+\
+                    str(int(Lngth))+"_Slope2e_2"+'_U'+"{:0>2d}".format(int(U0*3.154e7))+".h5","w")
+    fFile.write(w_0,"/f")
+    fFile.close()
 
-    # Print information of interest.
+    # Save the time series if necessary.
+    if checkpoint and (i % save_interval == 0):
+        np.savetxt(resultsname+'/'+casename+'/line_plot_data/Gamma_s',Gamma_s)   
+        np.savetxt(resultsname+'/'+casename+'/line_plot_data/Gamma_h',Gamma_h)    
+        np.savetxt(resultsname+'/'+casename+'/line_plot_data/s_mean',s_mean)      
+        np.savetxt(resultsname+'/'+casename+'/line_plot_data/h_mean',h_mean)
+        np.savetxt(resultsname+'/'+casename+'/line_plot_data/x_left',x_left)
+        np.savetxt(resultsname+'/'+casename+'/line_plot_data/x_right',x_right)    
+        np.savetxt(resultsname+'/'+casename+'/line_plot_data/P_res',P_res)        
+        np.savetxt(resultsname+'/'+casename+'/line_plot_data/X',X_fine)           
+
+    # Print grounding line position.
     print('Left grounding line: '+str(x_left[i]/1000.0)+' km')
     print('Right grounding line: '+str(x_right[i]/1000.0)+' km')
 
+#-------------------------Save the results--------------------------------------
 # Save quantities of interest.
 t_arr = np.linspace(0,t_final,num=int(nt_per_year*t_final/3.154e7))
 
-# save the mesh when initiating the mesh
-if model == 'marine' and tides == 'on':
-    new_mesh << mesh
+# Save solution
+fFile = HDF5File(MPI.comm_world,resultsname+'/'+casename+"/w_init_DX"+str(int(DX_s))+"_L"+\
+                 str(int(Lngth))+"_Slope2e_2"+'_U'+"{:0>2d}".format(int(U0*3.154e7))+".h5","w")
+fFile.write(w_0,"/f")
+fFile.close()
 
+# Save the mesh.
+new_mesh << mesh
+
+# Save the final time series.
 np.savetxt(resultsname+'/'+casename+'/line_plot_data/Gamma_s',Gamma_s)    # see definition above
 np.savetxt(resultsname+'/'+casename+'/line_plot_data/Gamma_h',Gamma_h)    # "   "
 np.savetxt(resultsname+'/'+casename+'/line_plot_data/s_mean',s_mean)      # ...

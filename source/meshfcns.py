@@ -5,12 +5,11 @@
 # (2) compute the grounding line positions.
 #------------------------------------------------------------------------------
 
-from params import tol,Lngth,Hght,model,realtime_plot,X_fine
+from params import tol,Lngth,Hght,X_fine
 from dolfin import *
 from fenics import *
-import matplotlib.pyplot as plt
 import numpy as np
-from geometry import bed,interface
+from geometry import bed
 from scipy.interpolate import interp1d
 
 # ------------------------------------------------------------------------------
@@ -32,9 +31,6 @@ def mesh_routine(w,mesh,dt,F_s,F_h):
 
     # Move the mesh
     move_mesh(mesh,baseslope,surfslope,dt,F_s,F_h,w)
-
-    # Plot surfaces in real time if realtime_plot = "on".
-    plot_surfaces(F_h,F_s,XL,XR)
 
     # Compute mean elevation of ice-water and ice-air surfaces.
     s_mean = np.mean(F_s(X_fine)[F_s(X_fine)-tol>bed(X_fine)])
@@ -88,11 +84,7 @@ def move_mesh(mesh,baseslope,surfslope,dt,F_s,F_h,w):
         elif np.abs(M[i,1]-F_h(M[i,0]))<tol:
             M[i,1] += dt*disp1[i]
 
-    # Smooth the interior nodes of the mesh
-    # mesh.smooth(10)
-
 #------------------------------------------------------------------------------
-
 def get_baseslope(mesh,F_s):
     # This function computes the slope of the lower surface and returns it as a FEniCS function.
 
@@ -214,48 +206,3 @@ def get_glines(F_s):
     XR = np.max(glines) # Maximum grounding line
 
     return XL,XR
-
-#------------------------------------------------------------------------------
-
-def plot_surfaces(F_h,F_s,XL,XR):
-    # Plotting in real time if realtime_plot is turned 'on' in the params.py file:
-    # Save a .png figure called 'surfaces' of the free surface geometry!
-    if realtime_plot == 'on':
-        X = X_fine
-        Gamma_h = F_h(X)
-        Gamma_s = F_s(X)
-
-        plt.figure(figsize=(8,6))
-
-        # Plot upper surface
-        plt.plot(X/1000-0.5*Lngth/1000,Gamma_h[:]-0.98*Hght,color='royalblue',linewidth=1,label=r'$h-0.98h_0$')
-
-        # Plot ice, water, and bed domains; colored accordingly.
-        p1 = plt.fill_between(X/1000-0.5*Lngth/1000,y1=Gamma_s[:], y2=Gamma_h[:]-0.98*Hght,facecolor='aliceblue',alpha=1.0)
-        p2 = plt.fill_between(X/1000-0.5*Lngth/1000,bed(X),Gamma_s[:],facecolor='slateblue',alpha=0.5)
-        p3 = plt.fill_between(X/1000-0.5*Lngth/1000,-18*np.ones(np.size(X)),bed(X),facecolor='burlywood',alpha=1.0)
-
-
-        # Plot bed surface
-        plt.plot(X/1000-0.5*Lngth/1000,bed(X),color='k',linewidth=1,label=r'$\beta$')
-
-        # Plot ice-water surface
-        plt.plot(X[(Gamma_s[:]-bed(X)>tol)]/1000-0.5*Lngth/1000,Gamma_s[:][(Gamma_s[:]-bed(X)>tol)],'o',color='crimson',markersize=1)
-
-        # Plot grounding lines
-        plt.plot(np.array([XL/1000-0.5*Lngth/1000]),np.array([np.min(bed(X))-1.0]),marker=r'^',color='k',linestyle='None',markersize=10,label=r'$x_\pm$')
-        plt.plot(np.array([XR/1000-0.5*Lngth/1000]),np.array([np.min(bed(X))-1.0]),marker=r'^',markersize=10,color='k')
-
-        # Label axes and save png:
-        plt.xlabel(r'$x$ (km)',fontsize=20)
-        plt.ylabel(r'$z$ (m)',fontsize=20)
-        plt.xticks(fontsize=16)
-        plt.yticks(fontsize=16)
-
-        plt.ylim(np.min(bed(X))-2.0,25.0,8)
-        plt.xlim(-0.5*Lngth/1000,0.5*Lngth/1000)
-        plt.tight_layout()
-        plt.savefig('surfaces',bbox_inches='tight')
-        plt.close()
-
-#------------------------------------------------------------------------------

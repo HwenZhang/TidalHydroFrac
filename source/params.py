@@ -1,47 +1,29 @@
-# All model parameters and options are recorded here.
-
-# NOTE: These parameters correspond to the tidal problem in the paper.
-
 import numpy as np
 #-------------------------------------------------------------------------------
 #----------------------------- MODEL OPTIONS -----------------------------------
-
+#-------------------------------------------------------------------------------
 # plotting flag
 model_setup = 'tides_paper'
 
-# Set model to 'lake' for subglacial lake or 'marine' for marine ice sheet
 model = 'marine'
 resultsname = 'results' # directory name
 
 # For the marine ice sheet setup, turn the tidal cycle 'on' or 'off'.
-# Turning tides 'on' defaults to a simulation time of ~1 week:
-tides = 'on'
-tides_modulation = 'off'    # tidal modulation
-
-# Turn 'on' or 'off' real-time plotting that saves a png figure called 'surfs' at
-# each time step of the free surface geometry.
-realtime_plot = 'off'
+tides = 'off'
+tides_modulation = 'off'    # solar tidal modulation
 
 # Turn 'on' or 'off' Newton convergence information:
 print_convergence = 'on'
 
-# Convergence: error on divergence when True 
-test = True
-
-# Newtonian viscosity
+# Newtonian fluid when True, and Glen's Flow law when False
 newtonian = False
 
+# Save the intermediate time series
+checkpoint = True
+
 # Mesh resolution at the lower boundary
-DX_s = 12.5                   # Element width at lower boundary (in meters)
-                              # Default values are {200,100,50,25,12.5}
-                              # This is used for (1) setting the element width in
-                              # gendomain.py and (2) selecting the mesh in main.py.
-
-DX_h = 250.0                  # Element width at the upper surface (in meters)
-
-
-if model != 'marine' and model != 'lake':
-    sys.exit('ERROR: Set \'model\' to \'marine\' or \'lake\' ONLY in params.py file!')
+DX_s = 12.5                   # Mesh Size (in meters)
+DX_h = 250.0                  # Mesh Size at the upper surface (in meters)
 
 #-------------------------------------------------------------------------------
 #-----------------------------MODEL PARAMETERS----------------------------------
@@ -63,8 +45,8 @@ rho_i = 917.0                      # Density of ice (kg/m^3)
 rho_w = 1000.0                     # Density of water (kg/m^3)
 g = 9.81                           # Gravitational acceleration (m/s^2)
 C = 1.0e7                          # Sliding law friction coefficient (Pa s^{1/n}/m)
-mu = 0.30e+9                       # Shear modulus (Pa) 0.39e9 - 1.70e9
-eta_const = 1.00e14                # Newtonian viscosity
+mu = 0.30e+9                       # Shear modulus (Pa)
+eta_const = 1.00e14                # Newtonian viscosity if applied
 
 # Numerical parameters
 eps_v = 1.0e-18                    # Flow law regularization parameter
@@ -78,30 +60,26 @@ tol = 1.0e-3                       # Numerical tolerance for boundary geometry:
 # Geometry parameters
 Lngth = 20*1000.0                  # Length of the domain (m)
 Hght = 500.0                       # (Initial) Height of the domain (m)
-bed_slope = 2.0e-2                 # bed slope
-lake_depth = 0.0                   # lake depth (m)
+bed_slope = 2.0e-2                 # bedrock slope
 
-tide_amplitude = 1.00              # tide amplitude (m)
-lunar_tide_amplitude = 1.2         # lunar tide amplitude (m)
+tide_amplitude = 0.00              # tide amplitude (m)
 sea_level = Hght*(917.0/1000.0)    # Sea level elevation (m).
-                                   # (Initial sea level for the tides problem)                                   
+                                   # (Initial sea level for the tides problem)     
+                                                              
 # Time-stepping parameters for tidal problems
-nt_per_year =  50 * 1000             # Number of timesteps per year. (tidal simulation)
-t_final =  10.0 / 360 * 3.154e7       # Final time (yr*sec_per_year). (tidal simulation)
+nt_per_year = 0.05 * 1e3           # mesh initiation time step
+t_final = 40 * 3.154e7/1e3             # 40 years
 
 nt = int(nt_per_year*t_final/3.154e7) # Number of time steps
 dt = t_final/nt                       # Timestep size
 
 nx = 10*int(Lngth/DX_s)               # Horizontal coordinate for computing surface
 X_fine = np.linspace(0,Lngth,num=nx)  # slopes, interpolated grounding line positions, and plotting.
+save_interval = 100
 
 # Set positive inflow speed boundary condition for marine ice sheet problem
 U0 = 9.0/3.154e7                      # Inflow speed 1 km/yr (m/yr / sec/yr) ~ 3e-3
 
-#------------------------------------------------------------------------------
-a_str = "{:0.2f}".format(tide_amplitude)
-casename = 'stokes_tidal_response_U09ma_L20000_Slope0_02_A3e_24_n3_0_mu0_30e9_deltap1e_13_deltav1e_18_tide'+\
-a_str.replace('.','_') + '_dw_'+ str(lake_depth).replace('.','_') +'_C1_0e7_DX12'
-
-# casename = 'stokes_tidal_response_U09ma_L20000_Slope0_02_A3e_24_n3_0_mu0_30e9_deltap1e_13_deltav1e_18_tide'+\
-#  a_str.replace('.','_') + 'modulated_C1_0e7_DX12'
+#------------------------------Casename----------------------------------------
+casename = 'stokes_mesh_initiation_U0'+str(int(U0*3.154e7))+'ma_L20000_Slope2e_2_A3e_24_n3_0_'+\
+            'mu0_30e9_deltap1e_13_deltav1e_18_C1_0e7_DX'+str(int(DX_s))
