@@ -47,7 +47,7 @@ The reference case represents the tidal response of a viscoelastic marine ice sh
 * How to postprocess the results is shown below.
 
 ## Postprocessing and Visulisation
-Postprocessing includes calculating $\sigma_{xx,max}$ on the top surface, calculting stress intensity factor $K_1$ and setting up the model-based criterion. These steps are included in the files **figure_n.ipynb**(n=1~8) to make figures.
+Postprocessing includes calculating $\sigma_{xx,max}$ on the top surface, calculting stress intensity factor $K_1$ and setting up the model-based criterion. When results are obtained, compute $\sigma_{xx,max}$ with **sigma_max.ipynb**, the make plots using files **figure_n.ipynb**(n=1~8).
 
 The figures in the manuscript are plotted using matplotlib (https://matplotlib.org/stable/), with the Python files given in **./scripts**. To run these codes, make sure that the relevant results are obtained and stored in **./results**, and the path in the files are modified.
 
