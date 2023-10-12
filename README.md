@@ -48,7 +48,7 @@ The reference case represents the tidal response of a viscoelastic marine ice sh
 ## Postprocessing and Visulisation
 Postprocessing includes calculating $\sigma_{xx,max}$ on the top surface, calculting stress intensity factor $K_1$ and setting up the model-based criterion. These steps are included in the files **figure_n.ipynb**(n=1~8) to make figures.
 
-The figures in the manuscript are plotted using matplotlib (https://matplotlib.org/stable/), with the Python files given in **./scripts**. To run these codes requires that the relevant results are obtained and stored in **./results**.
+The figures in the manuscript are plotted using matplotlib (https://matplotlib.org/stable/), with the Python files given in **./scripts**. To run these codes, make sure that the relevant results are obtained and stored in **./results**, and the path in the files are modified.
 
 ## Other cases
 For cases with a different bedslope angle or rheological parameters, please first run **create_mesh.py** as `python3 ./scripts/create_mesh.py` to create a .xdmf mesh file, and then initiate the mesh by following above instructions. After getting the mesh and initial state, perform tidal-response simulations. Please adjust the solver parameters accordingly to maintain good solver performance.
