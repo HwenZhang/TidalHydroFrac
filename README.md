@@ -11,6 +11,7 @@ The repository contains the essential files to simulate the tidal response in th
 ### Scripts
 * **create_mesh.py** is used to produce a mesh with piecewise-linear bottom profile, which will be used for simulations of long-term ice flow when initiating the mesh for tidal simulations.
 * **figure_n.ipynb**(n=1~8) are used to make figures in the manuscript. Please note the code needs to be modified if used to visualise new results.
+* **sigma_max.ipynb** computes $\sigma_{xx,max}$ on the surface of ice sheets.
 
 ### Meshes
 Gmsh (https://gmsh.info/) is used for mesh generation in the code.
