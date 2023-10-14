@@ -68,7 +68,7 @@ sea_level = Hght*(917.0/1000.0)    # Sea level elevation (m).
                                                                   
 # Time-stepping parameters for tidal problems
 nt_per_year =  50*1000             # Number of timesteps per year. (tidal simulation)
-t_final =  10.0/360.*3.154e7       # Final time (yr*sec_per_year). (tidal simulation)
+t_final =  20.0/360.*3.154e7       # Final time (yr*sec_per_year). (tidal simulation)
 
 nt = int(nt_per_year*t_final/3.154e7) # Number of time steps
 dt = t_final/nt                       # Timestep size
