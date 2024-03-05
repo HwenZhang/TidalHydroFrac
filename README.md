@@ -1,6 +1,4 @@
 # Overview
-[![DOI](https://zenodo.org/badge/564283753.svg)](https://zenodo.org/doi/10.5281/zenodo.10781685)
-
 The repository contains Python files for the manuscript "Viscoelastic mechanics of tidally induced lake drainage in the Amery grounding zone", which is submitted to The Cryosphere. Below is a schematic of the numerical model.
 
 ![Image text](https://github.com/HwenZhang/TidalHydroFrac/blob/147148f5916b7197c94a07abe23951a49d448c2f/grounding_line_mesh_sensitivity/image/schematic.png)
