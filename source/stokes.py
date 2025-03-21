@@ -119,10 +119,10 @@ def stokes_solve_marine(mesh,F_h,t,w_old):
         newton_prm['krylov_solver']['monitor_convergence'] = False
 
         # Relaxation parameter & tolerance
-        newton_prm['relaxation_parameter'] = 0.4
+        newton_prm['relaxation_parameter'] = 0.5
         newton_prm["relative_tolerance"] = 1e-14
-        newton_prm["absolute_tolerance"] = 5.0e-3
-        newton_prm["maximum_iterations"] = 100
+        newton_prm["absolute_tolerance"] = 1.0e-2
+        newton_prm["maximum_iterations"] = 200
         solver_nonlinear.solve()
 
         # Compute penalty functional residiual.

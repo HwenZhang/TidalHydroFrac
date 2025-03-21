@@ -21,7 +21,7 @@ import scipy.integrate as scpint
 import os
 from params import (tol,t_final,nt_per_year,Lngth,Hght,nt,dt,
                     print_convergence,X_fine,nx,tides,DX_s,checkpoint)
-from params import (tol,dt,Lngth,U0,save_interval,resultsname,casename)
+from params import (tol,dt,Lngth,U0,save_interval,resultsname,casename,slope_str)
 
 #--------------------Initial conditions-----------------------------------------
 # Compute initial mean elevation of ice-water interface and initial lake volume.
@@ -52,10 +52,10 @@ vtkfile_strain_rate = File(resultsname+'/'+casename+'/field_plot_data/strain_rat
 if tides == 'on':
     # tidal-response simulation
     mesh = Mesh('./meshes/'+'tides_DX'+str(int(DX_s))+\
-                '_Lngth'+str(int(Lngth))+'_Slope2e_2'+'_U'+"{:0>2d}".format(int(U0*3.154e7))+'.xml')
+                '_Lngth'+str(int(Lngth))+'_'+slope_str+'_U'+"{:0>2d}".format(int(U0*3.154e7))+'.xml')
 elif tides == 'off':
     # mesh name
-    meshname = 'marine_DX'+str(int(DX_s))+'_Lngth'+str(int(Lngth))+'_Slope2e_2'
+    meshname = 'marine_DX'+str(int(DX_s))+'_Lngth'+str(int(Lngth))+'_'+slope_str
     # read in the mesh
     mesh = Mesh()
     with XDMFFile(MPI.comm_world, "./meshes/"+meshname+'/'+ meshname+'.xdmf') as meshfile:
@@ -64,7 +64,7 @@ elif tides == 'off':
     print("The MeshValueCollection: ", mvc)
 # Save the mesh
 new_mesh = File(resultsname+'/'+casename+'/tides'+'_DX'+str(int(DX_s))+\
-                '_Lngth'+str(int(Lngth))+'_Slope2e_2'+'_U'+"{:0>2d}".format(int(U0*3.154e7))+'.xml')
+                '_Lngth'+str(int(Lngth))+'_'+slope_str+'_U'+"{:0>2d}".format(int(U0*3.154e7))+'.xml')
 
 # ======================= result arrays =============================
 # Define arrays for saving surfaces, lake volume, water pressure, and
@@ -96,7 +96,7 @@ for i in range(nt):
     # Solve the Stokes problem.
     # Load the initial state if simulating tidal response.
     if t==0 and tides == 'on':
-        fFile = HDF5File(MPI.comm_world,"./meshes/w_init_DX"+str(int(DX_s))+"_L"+str(int(Lngth))+"_Slope2e_2"\
+        fFile = HDF5File(MPI.comm_world,"./meshes/w_init_DX"+str(int(DX_s))+"_L"+str(int(Lngth))+"_"+slope_str\
         +'_U'+"{:0>2d}".format(int(U0*3.154e7))+'.h5',"r")
         fFile.read(w_0,"/f")
         fFile.close()
@@ -140,7 +140,7 @@ for i in range(nt):
     t += dt
     # Save solution
     fFile = HDF5File(MPI.comm_world,resultsname+'/'+casename+"/w_init_DX"+str(int(DX_s))+"_L"+\
-                    str(int(Lngth))+"_Slope2e_2"+'_U'+"{:0>2d}".format(int(U0*3.154e7))+".h5","w")
+                    str(int(Lngth))+"_"+slope_str+'_U'+"{:0>2d}".format(int(U0*3.154e7))+".h5","w")
     fFile.write(w_0,"/f")
     fFile.close()
 
@@ -165,7 +165,7 @@ t_arr = np.linspace(0,t_final,num=int(nt_per_year*t_final/3.154e7))
 
 # Save solution
 fFile = HDF5File(MPI.comm_world,resultsname+'/'+casename+"/w_init_DX"+str(int(DX_s))+"_L"+\
-                 str(int(Lngth))+"_Slope2e_2"+'_U'+"{:0>2d}".format(int(U0*3.154e7))+".h5","w")
+                 str(int(Lngth))+'_'+slope_str+'_U'+"{:0>2d}".format(int(U0*3.154e7))+".h5","w")
 fFile.write(w_0,"/f")
 fFile.close()
 
